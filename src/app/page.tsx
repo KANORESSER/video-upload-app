@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 import styles from './page.module.css'
 
 export default function Home() {
@@ -40,14 +41,18 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
-        <div>
-          <h1 className={styles.heading}>動画アップロード</h1>
-          <p className={styles.subheading}>mp4などの動画ファイルをURLに変換します</p>
-        </div>
+      <div className={styles.header}>
+        <h1 className={styles.headerTitle}>動画URLジェネレッサー</h1>
+      </div>
 
+      <div className={styles.card}>
         <div className={styles.dropzone} onClick={() => inputRef.current?.click()}>
-          <span className={styles.emoji}>🎬</span>
+          <Image
+            src={file ? '/movie2.png' : '/movie1.png'}
+            alt="レッサーニャンコ"
+            width={140}
+            height={140}
+          />
           {file ? (
             <p className={styles.filename}>{file.name}</p>
           ) : (
@@ -71,7 +76,7 @@ export default function Home() {
           onClick={handleUpload}
           disabled={!file || uploading}
         >
-          {uploading ? 'アップロード中...' : 'アップロード'}
+          {uploading ? 'アップロード中...' : 'アップロード🐾'}
         </button>
 
         {error && <p className={styles.error}>{error}</p>}
