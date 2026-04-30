@@ -8,28 +8,57 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null)
   const [url, setUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [transferring, setTransferring] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     if (!file) return
     setUploading(true)
+    setProgress(0)
+    setTransferring(false)
     setError(null)
     setUrl(null)
 
     const formData = new FormData()
     formData.append('file', file)
 
-    const res = await fetch('/api/upload', { method: 'POST', body: formData })
-    const data = await res.json()
+    const xhr = new XMLHttpRequest()
 
-    if (!res.ok) {
-      setError(data.error ?? 'アップロードに失敗しました')
-    } else {
-      setUrl(data.url)
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100)
+        setProgress(pct)
+        if (pct === 100) setTransferring(true)
+      }
     }
-    setUploading(false)
+
+    xhr.onload = () => {
+      setTransferring(false)
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const data = JSON.parse(xhr.responseText)
+        setUrl(data.url)
+      } else {
+        try {
+          const data = JSON.parse(xhr.responseText)
+          setError(data.error ?? 'アップロードに失敗しました')
+        } catch {
+          setError('アップロードに失敗しました')
+        }
+      }
+      setUploading(false)
+    }
+
+    xhr.onerror = () => {
+      setTransferring(false)
+      setError('アップロードに失敗しました')
+      setUploading(false)
+    }
+
+    xhr.open('POST', '/api/upload')
+    xhr.send(formData)
   }
 
   const handleCopy = () => {
@@ -37,6 +66,15 @@ export default function Home() {
     navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleReset = () => {
+    setFile(null)
+    setUrl(null)
+    setError(null)
+    setProgress(0)
+    setTransferring(false)
+    if (inputRef.current) inputRef.current.value = ''
   }
 
   return (
@@ -48,7 +86,7 @@ export default function Home() {
       <div className={styles.card}>
         <div className={styles.dropzone} onClick={() => inputRef.current?.click()}>
           <Image
-            src={file ? '/movie2.png' : '/movie1.png'}
+            src={file ? '/movie1.png' : '/movie2.png'}
             alt="レッサーニャンコ"
             width={140}
             height={140}
@@ -56,7 +94,10 @@ export default function Home() {
           {file ? (
             <p className={styles.filename}>{file.name}</p>
           ) : (
-            <p className={styles.placeholder}>クリックして動画ファイルを選択</p>
+            <>
+              <p className={styles.placeholderDesktop}>クリックして動画ファイルを選択</p>
+              <p className={styles.placeholderMobile}>タッチして動画ファイルを選択</p>
+            </>
           )}
           <input
             ref={inputRef}
@@ -76,8 +117,22 @@ export default function Home() {
           onClick={handleUpload}
           disabled={!file || uploading}
         >
-          {uploading ? 'アップロード中...' : 'アップロード🐾'}
+          {uploading ? (transferring ? 'Cloudinaryへ転送中...' : 'アップロード中...') : 'アップロード🐾'}
         </button>
+
+        {uploading && (
+          <div className={styles.progressWrapper}>
+            <div className={styles.progressBar}>
+              <div
+                className={`${styles.progressFill}${transferring ? ` ${styles.progressPulse}` : ''}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className={styles.progressLabel}>
+              {transferring ? 'Cloudinaryへ転送中...' : `${progress}%`}
+            </p>
+          </div>
+        )}
 
         {error && <p className={styles.error}>{error}</p>}
 
@@ -90,6 +145,9 @@ export default function Home() {
                 {copied ? 'コピー済み' : 'コピー'}
               </button>
             </div>
+            <button className={styles.resetButton} onClick={handleReset}>
+              リセット
+            </button>
           </div>
         )}
       </div>
