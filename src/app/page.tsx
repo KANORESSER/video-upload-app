@@ -14,7 +14,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file) return
     setUploading(true)
     setProgress(0)
@@ -22,8 +22,22 @@ export default function Home() {
     setError(null)
     setUrl(null)
 
+    let signData: { timestamp: number; signature: string; api_key: string; cloud_name: string; folder: string }
+    try {
+      const signRes = await fetch('/api/sign-upload', { method: 'POST' })
+      signData = await signRes.json()
+    } catch {
+      setError('アップロードに失敗しました')
+      setUploading(false)
+      return
+    }
+
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('api_key', signData.api_key)
+    formData.append('timestamp', signData.timestamp.toString())
+    formData.append('signature', signData.signature)
+    formData.append('folder', signData.folder)
 
     const xhr = new XMLHttpRequest()
 
@@ -39,14 +53,9 @@ export default function Home() {
       setTransferring(false)
       if (xhr.status >= 200 && xhr.status < 300) {
         const data = JSON.parse(xhr.responseText)
-        setUrl(data.url)
+        setUrl(data.secure_url)
       } else {
-        try {
-          const data = JSON.parse(xhr.responseText)
-          setError(data.error ?? 'アップロードに失敗しました')
-        } catch {
-          setError('アップロードに失敗しました')
-        }
+        setError('アップロードに失敗しました')
       }
       setUploading(false)
     }
@@ -57,7 +66,7 @@ export default function Home() {
       setUploading(false)
     }
 
-    xhr.open('POST', '/api/upload')
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${signData.cloud_name}/video/upload`)
     xhr.send(formData)
   }
 
@@ -117,7 +126,7 @@ export default function Home() {
           onClick={handleUpload}
           disabled={!file || uploading}
         >
-          {uploading ? (transferring ? 'Cloudinaryへ転送中...' : 'アップロード中...') : 'アップロード🐾'}
+          {uploading ? (transferring ? '処理中...' : 'アップロード中...') : 'アップロード🐾'}
         </button>
 
         {uploading && (
@@ -129,7 +138,7 @@ export default function Home() {
               />
             </div>
             <p className={styles.progressLabel}>
-              {transferring ? 'Cloudinaryへ転送中...' : `${progress}%`}
+              {transferring ? 'Cloudinaryで処理中...' : `${progress}%`}
             </p>
           </div>
         )}
