@@ -234,8 +234,6 @@
 @media (max-width: 480px) {
   .page {
     padding: 16px;
-    justify-content: flex-start;
-    padding-top: 32px;
   }
 
   .card {
