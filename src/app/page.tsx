@@ -145,7 +145,14 @@ export default function Home() {
           </div>
         )}
 
-        {error && <p className={styles.error}>{error}</p>}
+        {error && (
+          <>
+            <p className={styles.error}>{error}</p>
+            <button className={styles.resetButton} onClick={handleReset}>
+              リセット
+            </button>
+          </>
+        )}
 
         {url && (
           <div className={styles.urlSection}>
