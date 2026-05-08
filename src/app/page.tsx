@@ -62,14 +62,19 @@ export default function Home() {
         const data = JSON.parse(xhr.responseText)
         setUrl(data.secure_url)
       } else {
-        setError('アップロードに失敗しました')
+        try {
+          const errData = JSON.parse(xhr.responseText)
+          setError(`アップロードに失敗しました (${xhr.status}): ${errData?.error?.message ?? xhr.responseText}`)
+        } catch {
+          setError(`アップロードに失敗しました (${xhr.status})`)
+        }
       }
       setUploading(false)
     }
 
     xhr.onerror = () => {
       setTransferring(false)
-      setError('アップロードに失敗しました')
+      setError('アップロードに失敗しました（ネットワークエラー）')
       setUploading(false)
     }
 
