@@ -17,7 +17,7 @@ export default function Home() {
   const handleUpload = async () => {
     if (!file) return
 
-    const MAX_SIZE_MB = 100
+    const MAX_SIZE_MB = 500
     if (file.size > MAX_SIZE_MB * 1024 * 1024) {
       setError(`ファイルサイズが大きすぎます（上限: ${MAX_SIZE_MB}MB）`)
       return
@@ -29,22 +29,11 @@ export default function Home() {
     setError(null)
     setUrl(null)
 
-    let signData: { timestamp: number; signature: string; api_key: string; cloud_name: string; folder: string }
-    try {
-      const signRes = await fetch('/api/sign-upload', { method: 'POST' })
-      signData = await signRes.json()
-    } catch {
-      setError('アップロードに失敗しました')
-      setUploading(false)
-      return
-    }
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('api_key', signData.api_key)
-    formData.append('timestamp', signData.timestamp.toString())
-    formData.append('signature', signData.signature)
-    formData.append('folder', signData.folder)
+    const ext = file.name.split('.').pop()
+    const filename = `${Date.now()}.${ext}`
 
     const xhr = new XMLHttpRequest()
 
@@ -59,8 +48,7 @@ export default function Home() {
     xhr.onload = () => {
       setTransferring(false)
       if (xhr.status >= 200 && xhr.status < 300) {
-        const data = JSON.parse(xhr.responseText)
-        setUrl(data.secure_url)
+        setUrl(`${supabaseUrl}/storage/v1/object/public/videos/${filename}`)
       } else {
         try {
           const errData = JSON.parse(xhr.responseText)
@@ -78,8 +66,10 @@ export default function Home() {
       setUploading(false)
     }
 
-    xhr.open('POST', `https://api.cloudinary.com/v1_1/${signData.cloud_name}/video/upload`)
-    xhr.send(formData)
+    xhr.open('POST', `${supabaseUrl}/storage/v1/object/videos/${filename}`)
+    xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`)
+    xhr.setRequestHeader('Content-Type', file.type)
+    xhr.send(file)
   }
 
   const handleCopy = () => {
