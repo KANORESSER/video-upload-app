@@ -17,7 +17,7 @@ export default function Home() {
   const handleUpload = async () => {
     if (!file) return
 
-    const MAX_SIZE_MB = 500
+    const MAX_SIZE_MB = 100
     if (file.size > MAX_SIZE_MB * 1024 * 1024) {
       setError(`ファイルサイズが大きすぎます（上限: ${MAX_SIZE_MB}MB）`)
       return
